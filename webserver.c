@@ -1,14 +1,15 @@
 /*Michael Chan CS118 Project 1*/
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <stdio.h>
+#include <errno.h>
 #include <netinet/in.h>
+#include <signal.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <strings.h>
-#include <sys/wait.h>
-#include <signal.h>
 #include <sys/ioctl.h>
-#include <errno.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 #define BUFF_SIZE 1024
 void error(char *msg)
@@ -99,13 +100,14 @@ int main(int argc, char *argv[])
                }
                else
                {
-                  printf("Here is the message: %s\n**************************************************\n", buffer);
-                  
- 
-                  writeBytes = write(i, "I got your message", 18);
-
+                  printf("Here is the message:\n%s\n**************************************************\n", buffer);
+                  writeBytes = write(i, "I got your message!\n", 20);
                   if(writeBytes < 0)
                      error("Error writing to socket");
+
+                  // Clean up TCP connection
+                  close(i); // When we write more complicated things, we will have to figure this out better
+                  FD_CLR(i, &active_fd_set);
                }
             }
          }
