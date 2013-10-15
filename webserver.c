@@ -10,8 +10,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <time.h>
 #include <unistd.h>
-
 #define BUFF_SIZE 1024
 void error(char *msg)
 {
@@ -23,12 +23,14 @@ void writeResponse(char *response, char *filename)
 {
    struct stat st;
    long size;
+   time_t lastModTime;
    long tempSize;
    long val;
    int curDig;
    long length; 
    char* sizeBuffer;
    char* stringStack;
+   char* lastModTimeStr;
    char c[2];
    int i, j;
    int sizeOfSizeBuffer;
@@ -43,7 +45,10 @@ void writeResponse(char *response, char *filename)
 
       stat(filename, &st);
       size = (long) st.st_size;
-   
+      lastModTime = st.st_mtime;
+      lastModTimeStr = (char *)malloc(26*sizeof(char));
+      lastModTimeStr = asctime(localtime(&lastModTime));
+      printf("%s\n", lastModTimeStr);
       val = 10;
       sizeOfSizeBuffer = 1;
       /*determine how many digits are in file size*/
@@ -103,15 +108,20 @@ void writeResponse(char *response, char *filename)
 
    strcat(response, "Date: Mon, 14 Oct 2013 22:09:53 PDT\r\n");
    strcat(response, "Server: Apache/2.2.3 (CentOS)\r\n");
-   strcat(response, "Last-Modified: Mon, 14 Oct 2013 21:01:10 PDT\r\n");
+   strcat(response, "Last-Modified: ");
+   strcat(response, lastModTimeStr);
+//   strcat(response, "\r\n");
    strcat(response, "Content-Length: ");
    strcat(response, sizeBuffer);
    strcat(response, "\r\n");
    strcat(response, "Content-Type: text/html\r\n\r\n");
    if(fileContents)
    {
-      strcat(response, fileContents);
-      strcat(response, "\r\n");
+      if(f)
+      {
+         strcat(response, fileContents);
+         strcat(response, "\r\n");
+      }
    } 
     
 }
