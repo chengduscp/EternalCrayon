@@ -42,16 +42,19 @@ void writeResponse(char *response, char *filename)
    if(f)
    {
 
-
+      /* get last modified time and file size*/
       stat(filename, &st);
       size = (long) st.st_size;
       lastModTime = st.st_mtime;
+  
+      /* convert last modified time string */
       lastModTimeStr = (char *)malloc(26*sizeof(char));
       lastModTimeStr = asctime(localtime(&lastModTime));
-      printf("%s\n", lastModTimeStr);
+
+
+      /*determine how many digits are in file size*/
       val = 10;
       sizeOfSizeBuffer = 1;
-      /*determine how many digits are in file size*/
       while(size > val)
       {
          val = val * 10;
@@ -100,21 +103,17 @@ void writeResponse(char *response, char *filename)
    {
       strcpy(response, "HTTP/1.1 404 Not Found\r\nConnection: cloe\r\n");
    }
-   //itoa(size, sizeBuffer, 10);
-   //strcpy(sizeBuffer, "166");
-
-
-
 
    strcat(response, "Date: Mon, 14 Oct 2013 22:09:53 PDT\r\n");
    strcat(response, "Server: Apache/2.2.3 (CentOS)\r\n");
    strcat(response, "Last-Modified: ");
    strcat(response, lastModTimeStr);
-//   strcat(response, "\r\n");
    strcat(response, "Content-Length: ");
    strcat(response, sizeBuffer);
    strcat(response, "\r\n");
    strcat(response, "Content-Type: text/html\r\n\r\n");
+
+   /*add entity body */
    if(fileContents)
    {
       if(f)
