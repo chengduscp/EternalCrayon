@@ -101,9 +101,9 @@ int main(int argc, char *argv[])
                else
                {
                   printf("Here is the message:\n%s\n**************************************************\n", buffer);
-                  writeBytes = write(i, "I got your message!\n", 20);
+                  /*writeBytes = write(i, "I got your message!\n", 20);
                   if(writeBytes < 0)
-                     error("Error writing to socket");
+                     error("Error writing to socket");*/
 
                   // Clean up TCP connection
                   close(i); // When we write more complicated things, we will have to figure this out better
