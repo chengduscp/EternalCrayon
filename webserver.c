@@ -7,6 +7,7 @@
 #include <strings.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -16,6 +17,103 @@ void error(char *msg)
 {
    perror(msg);
    exit(1);
+}
+
+void writeResponse(char *response, char *filename)
+{
+   struct stat st;
+   long size;
+   long tempSize;
+   long val;
+   int curDig;
+   long length; 
+   char* sizeBuffer;
+   char* stringStack;
+   char c[2];
+   int i, j;
+   int sizeOfSizeBuffer;
+   char *fileContents;
+   FILE *f = fopen(filename, "rb");
+
+   
+
+   if(f)
+   {
+
+
+      stat(filename, &st);
+      size = (long) st.st_size;
+   
+      val = 10;
+      sizeOfSizeBuffer = 1;
+      /*determine how many digits are in file size*/
+      while(size > val)
+      {
+         val = val * 10;
+         sizeOfSizeBuffer++;
+      }
+      sizeBuffer  = (char *)malloc(sizeOfSizeBuffer+1);
+      stringStack = (char *)malloc(sizeOfSizeBuffer+1);
+
+      /*convert size to a string*/
+      tempSize = size;
+      curDig = tempSize % 10;
+      curDig = curDig + ((int)'0');
+      c[0] = (char) curDig;
+      c[1] = '\0';
+       
+      strcpy(stringStack, c);
+      tempSize = tempSize / 10;
+      while(tempSize > 0)
+      {
+         curDig = tempSize % 10;
+         curDig = curDig + ((int)'0');
+
+         c[0] = (char) curDig;
+         c[1] = '\0';
+         strcat(stringStack, c);
+         tempSize = tempSize / 10;
+                  
+      }
+      j = sizeOfSizeBuffer - 1;
+      for(i = 0; i < sizeOfSizeBuffer ; i++)
+      {
+         sizeBuffer[i] = stringStack[j];
+         j--;
+      }
+      sizeBuffer[sizeOfSizeBuffer] = '\0';
+      fileContents = malloc(size);
+      if(fileContents)
+      {
+        fread(fileContents, 1, size, f);
+      }
+      fclose(f);
+
+      strcpy(response, "HTTP/1.1 200 OK\r\nConnection: close\r\n");
+   }
+   else
+   {
+      strcpy(response, "HTTP/1.1 404 Not Found\r\nConnection: cloe\r\n");
+   }
+   //itoa(size, sizeBuffer, 10);
+   //strcpy(sizeBuffer, "166");
+
+
+
+
+   strcat(response, "Date: Mon, 14 Oct 2013 22:09:53 PDT\r\n");
+   strcat(response, "Server: Apache/2.2.3 (CentOS)\r\n");
+   strcat(response, "Last-Modified: Mon, 14 Oct 2013 21:01:10 PDT\r\n");
+   strcat(response, "Content-Length: ");
+   strcat(response, sizeBuffer);
+   strcat(response, "\r\n");
+   strcat(response, "Content-Type: text/html\r\n\r\n");
+   if(fileContents)
+   {
+      strcat(response, fileContents);
+      strcat(response, "\r\n");
+   } 
+    
 }
 
 int main(int argc, char *argv[])
@@ -86,7 +184,9 @@ int main(int argc, char *argv[])
 
                int readBytes, writeBytes;
                char buffer[BUFF_SIZE];
-      
+               char httpResponse[10000];     
+
+ 
                memset(buffer, 0, BUFF_SIZE*sizeof(char));
                readBytes = read(i, buffer, BUFF_SIZE-1);
                if(readBytes < 0)
@@ -106,6 +206,11 @@ int main(int argc, char *argv[])
                      error("Error writing to socket");*/
 
                   // Clean up TCP connection
+                  writeResponse(httpResponse, "sample.html");
+                  printf("Response:\n%s\n", httpResponse);
+                  writeBytes = write(i, httpResponse, strlen(httpResponse));
+                  if(writeBytes < 0)
+                     error("Error writing to socket");
                   close(i); // When we write more complicated things, we will have to figure this out better
                   FD_CLR(i, &active_fd_set);
                }
