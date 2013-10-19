@@ -35,6 +35,8 @@ void writeResponse(char *response, char *filename)
    int i, j;
    int sizeOfSizeBuffer;
    char *fileContents;
+   char *timeOfResponse;
+   time_t curTime;
    FILE *f = fopen(filename, "rb");
 
    
@@ -104,7 +106,12 @@ void writeResponse(char *response, char *filename)
       strcpy(response, "HTTP/1.1 404 Not Found\r\nConnection: cloe\r\n");
    }
 
-   strcat(response, "Date: Mon, 14 Oct 2013 22:09:53 PDT\r\n");
+   curTime = time(NULL);
+   timeOfResponse = (char *)malloc(26*sizeof(char));
+   timeOfResponse = asctime(localtime(&curTime));
+
+   strcat(response, "Date: ");
+   strcat(response, timeOfResponse);
    strcat(response, "Server: Apache/2.2.3 (CentOS)\r\n");
    strcat(response, "Last-Modified: ");
    strcat(response, lastModTimeStr);
@@ -122,7 +129,7 @@ void writeResponse(char *response, char *filename)
          strcat(response, "\r\n");
       }
    } 
-    
+
 }
 
 int main(int argc, char *argv[])
