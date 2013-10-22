@@ -13,46 +13,59 @@
 #include <time.h>
 #include <unistd.h>
 #define BUFF_SIZE 1024
+typedef enum
+{
+   TEXT_HTML,
+   IMAGE_JPEG,
+   IMAGE_GIF,
+   OTHER
+} content_type_t;
 void error(char *msg)
 {
    perror(msg);
    exit(1);
 }
 
-void writeResponse(char *response, char *filename)
+/* this file reads the filecontents and stores it in fileBuf*/
+static int inline getContents(char* filename, int* fSize, char* fileBuf)
+{
+   
+   FILE *f = fopen(filename, "rb");
+   if(f)
+   {
+      if(fileBuf)
+      {
+        *fSize = fread(fileBuf, 1, *fSize, f);
+      }
+      fclose(f);
+      return 1;
+   }
+   else
+      return 0;
+}
+
+/*this file takes care of creating the HTTP response except for the file contents*/
+static void inline writeResponse(char *response, char *filename, content_type_t content_type, int* fSize )
 {
    struct stat st;
-   long size;
-   time_t lastModTime;
-   long tempSize;
-   long val;
-   int curDig;
-   long length; 
-   char* sizeBuffer;
-   char* stringStack;
-   char* lastModTimeStr;
+   long size, tempSize, val, strSize;
+   time_t lastModTime, curTime;
+   int curDig , i , j, sizeOfSizeBuffer;
+   char *sizeBuffer, *stringStack, *lastModTimeStr, *timeOfResponse;
    char c[2];
-   int i, j;
-   int sizeOfSizeBuffer;
-   char *fileContents;
-   char *timeOfResponse;
-   time_t curTime;
    FILE *f = fopen(filename, "rb");
-
-   
+    
 
    if(f)
    {
-
       /* get last modified time and file size*/
       stat(filename, &st);
-      size = (long) st.st_size;
+      size = (long) st.st_size; 
       lastModTime = st.st_mtime;
-  
+
       /* convert last modified time string */
       lastModTimeStr = (char *)malloc(26*sizeof(char));
       lastModTimeStr = asctime(localtime(&lastModTime));
-
 
       /*determine how many digits are in file size*/
       val = 10;
@@ -67,6 +80,7 @@ void writeResponse(char *response, char *filename)
 
       /*convert size to a string*/
       tempSize = size;
+      *fSize   = size;
       curDig = tempSize % 10;
       curDig = curDig + ((int)'0');
       c[0] = (char) curDig;
@@ -92,43 +106,48 @@ void writeResponse(char *response, char *filename)
          j--;
       }
       sizeBuffer[sizeOfSizeBuffer] = '\0';
-      fileContents = malloc(size);
-      if(fileContents)
-      {
-        fread(fileContents, 1, size, f);
-      }
       fclose(f);
 
       strcpy(response, "HTTP/1.1 200 OK\r\nConnection: close\r\n");
    }
    else
    {
-      strcpy(response, "HTTP/1.1 404 Not Found\r\nConnection: cloe\r\n");
+      strcpy(response, "HTTP/1.1 404 Not Found\r\nConnection: close\r\n");
    }
 
+   /*populate response fields */
    curTime = time(NULL);
    timeOfResponse = (char *)malloc(26*sizeof(char));
    timeOfResponse = asctime(localtime(&curTime));
-
    strcat(response, "Date: ");
    strcat(response, timeOfResponse);
    strcat(response, "Server: Apache/2.2.3 (CentOS)\r\n");
-   strcat(response, "Last-Modified: ");
-   strcat(response, lastModTimeStr);
-   strcat(response, "Content-Length: ");
-   strcat(response, sizeBuffer);
-   strcat(response, "\r\n");
-   strcat(response, "Content-Type: text/html\r\n\r\n");
 
-   /*add entity body */
-   if(fileContents)
+   if(f)
    {
-      if(f)
-      {
-         strcat(response, fileContents);
-         strcat(response, "\r\n");
-      }
-   } 
+      strcat(response, "Last-Modified: ");
+      strcat(response, lastModTimeStr);
+      strcat(response, "Content-Length: ");
+      strcat(response, sizeBuffer);
+      strcat(response, "\r\n");
+
+      if(content_type == TEXT_HTML)
+         strcat(response, "Content-Type: text/html\r\n\r\n");
+      else if(content_type == IMAGE_JPEG)
+         strcat(response, "Content-Type: image/jpeg\r\n\r\n");
+      else if(content_type == IMAGE_GIF)
+         strcat(response, "Content-Type: image/gif\r\n\r\n");
+      else
+         strcat(response, "Content-Type: \r\n\r\n");
+   }
+   else
+   {
+      strcat(response, "Last-Modified: \r\n");
+      strcat(response, "Content-Length: 30\r\n");
+      strcat(response, "Content-Type: \r\n\r\n");
+      strcat(response, "HTTP/1.1 404 Content Not Found");
+   }
+
 
 }
 
@@ -198,10 +217,12 @@ int main(int argc, char *argv[])
             else
             {
 
+               int t;
                int readBytes, writeBytes;
                char buffer[BUFF_SIZE];
-               char httpResponse[10000];     
-
+               char httpResponse[1000000];     
+               char* fileBuf;
+               int fSize;
  
                memset(buffer, 0, BUFF_SIZE*sizeof(char));
                readBytes = read(i, buffer, BUFF_SIZE-1);
@@ -222,9 +243,20 @@ int main(int argc, char *argv[])
                      error("Error writing to socket");*/
 
                   // Clean up TCP connection
-                  writeResponse(httpResponse, "sample.html");
-                  printf("Response:\n%s\n", httpResponse);
-                  writeBytes = write(i, httpResponse, strlen(httpResponse));
+                  
+                  writeResponse(httpResponse, "face.gif", IMAGE_GIF,
+                                &fSize);
+                  fileBuf = (char *)malloc(fSize*sizeof(char));
+                  writeBytes = send(i, httpResponse, strlen(httpResponse),0);
+                  if(writeBytes < 0)
+                     error("Error writing to socket");
+
+                  if( getContents("face.gif", &fSize, fileBuf) == 1)
+                     writeBytes = send(i, fileBuf, fSize, 0);
+                 
+                  if(writeBytes < 0)
+                     error("Error writing to socket");
+
                   if(writeBytes < 0)
                      error("Error writing to socket");
                   close(i); // When we write more complicated things, we will have to figure this out better
