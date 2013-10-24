@@ -81,7 +81,7 @@ typedef enum accept_type_ {
 } accept_type_t;
 
 typedef struct http_header_ {
-   const char *file_name;
+   char *file_name;
    file_type_t file_type;
    unsigned int host_ip, port;
    // We can ignore User-Agent
@@ -487,6 +487,7 @@ void get_port(parser_t *p, http_header_t *h) {
       fprintf(stderr, "Unable to get port number\n");
       return;
    }
+   delete_token(t);
    h->port = port;
    TOKEN_ASSERTION(t, p, (t->type == LINEEND));
 }
@@ -502,6 +503,7 @@ void get_sub_headers(parser_t *p, http_header_t *h) {
          // Can skip these ones -- maybe implement them later
          // printf("Skipping...\n");
       } else if (token_cmp(t, "Connection") == 0) {
+         delete_token(t);
          TOKEN_ASSERTION(t, p, (token_cmp_c(t, SEPERATOR, ':') == 0));
          t = get_token(p);
          if (token_cmp(t, "keep-alive") == 0) {
@@ -520,8 +522,9 @@ void get_sub_headers(parser_t *p, http_header_t *h) {
          t = get_token(p);
       }
       delete_token(t);
-      token_t *t = get_token(p);
+      t = get_token(p);
    }
+   delete_token(t);
 }
 
 http_header_t *get_header(parser_t *p) {
@@ -548,10 +551,8 @@ http_header_t *parse_header(const char *header_string)
    t = get_token(&p);
    if (token_cmp(t, "GET") == 0)
    {
+      delete_token(t);
       return get_header(&p);
-      // printf("%s\n", header->file_name);
-      // print_file_type(&header->file_type);
-      // printf("%x:%u\n", header->host_ip, header->port);
    }
    else if (error_token(t))
    {
@@ -809,6 +810,8 @@ int main(int argc, char *argv[])
                      error("Error writing to socket");
 
                   free(fileBuf);
+                  free(header->file_name);
+                  free(header);
 
                   close(i);
                   FD_CLR(i, &active_fd_set);

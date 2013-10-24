@@ -67,7 +67,7 @@ typedef enum accept_type_ {
 } accept_type_t;
 
 typedef struct http_header_ {
-   const char *file_name;
+   char *file_name;
    file_type_t file_type;
    unsigned int host_ip, port;
    // We can ignore User-Agent
@@ -198,7 +198,6 @@ void delete_token(token_t *t)
    if(!t) return;
    delete_string(t);
    free(t);
-   t = 0;
 }
 
 
@@ -261,7 +260,6 @@ token_t* get_token(parser_t *p)
       p->last = next;
       next = p->get(p->args);
    }
-      // printf("Got here\n");
 
    // Check that we actually have characters in our token
    if(t->string.len == 0)
@@ -467,6 +465,7 @@ void get_port(parser_t *p, http_header_t *h) {
       fprintf(stderr, "Unable to get port number\n");
       return;
    }
+   delete_token(t);
    h->port = port;
    TOKEN_ASSERTION(t, p, (t->type == LINEEND));
 }
@@ -474,6 +473,7 @@ void get_port(parser_t *p, http_header_t *h) {
 void get_sub_headers(parser_t *p, http_header_t *h) {
    h->accept_type = ANYTHING; // For now, we assume the client accepts whatever file format
    token_t *t = get_token(p);
+
    while (t->type != LINEEND) { // Double line ending indicates end of header
       if (token_cmp(t, "User-Agent") == 0 ||
             token_cmp(t, "Accept-Language") == 0 ||
@@ -482,6 +482,7 @@ void get_sub_headers(parser_t *p, http_header_t *h) {
          // Can skip these ones -- maybe implement them later
          // printf("Skipping...\n");
       } else if (token_cmp(t, "Connection") == 0) {
+         delete_token(t);
          TOKEN_ASSERTION(t, p, (token_cmp_c(t, SEPERATOR, ':') == 0));
          t = get_token(p);
          if (token_cmp(t, "keep-alive") == 0) {
@@ -500,8 +501,9 @@ void get_sub_headers(parser_t *p, http_header_t *h) {
          t = get_token(p);
       }
       delete_token(t);
-      token_t *t = get_token(p);
+      t = get_token(p);
    }
+   delete_token(t);
 }
 
 http_header_t *get_header(parser_t *p) {
@@ -529,6 +531,8 @@ void parse_header(const char *header)
       printf("%s\n", header->file_name);
       print_file_type(&header->file_type);
       printf("%x:%u\n", header->host_ip, header->port);
+      free(header->file_name);
+      free(header);
    }
    else if (error_token(t))
    {
