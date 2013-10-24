@@ -600,6 +600,10 @@ static void inline writeResponse(char *response, const char *filename, file_type
    time_t lastModTime, curTime;
    int curDig , i , j, sizeOfSizeBuffer;
    char *sizeBuffer, *stringStack, *lastModTimeStr, *timeOfResponse;
+   char lastModTimeStrArr[26];
+   char timeOfResponseArr[26];
+   lastModTimeStr = &lastModTimeStrArr[0];
+   timeOfResponse = &timeOfResponseArr[0];
    char c[2];
    FILE *f = fopen(filename, "rb");
     
@@ -612,7 +616,6 @@ static void inline writeResponse(char *response, const char *filename, file_type
       lastModTime = st.st_mtime;
 
       /* convert last modified time string */
-      lastModTimeStr = (char *)malloc(26*sizeof(char));
       lastModTimeStr = asctime(localtime(&lastModTime));
 
       /*determine how many digits are in file size*/
@@ -665,7 +668,6 @@ static void inline writeResponse(char *response, const char *filename, file_type
 
    /*populate response fields */
    curTime = time(NULL);
-   timeOfResponse = (char *)malloc(26*sizeof(char));
    timeOfResponse = asctime(localtime(&curTime));
    strcat(response, "Date: ");
    strcat(response, timeOfResponse);
@@ -696,8 +698,11 @@ static void inline writeResponse(char *response, const char *filename, file_type
       strcat(response, "HTTP/1.1 404 Content Not Found");
    }
 
-   free(sizeBuffer);
-   free(stringStack);
+   if(f) {
+      free(sizeBuffer);
+      free(stringStack);
+   }
+   free(timeOfResponse);
 }
 
 int main(int argc, char *argv[])
