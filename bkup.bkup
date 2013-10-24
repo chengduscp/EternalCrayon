@@ -1,0 +1,45 @@
+
+         case '\0':
+            finished = 1;
+            break;
+         case '\r':
+         case '\n': // End of line characters
+            if (p->state == STARTED)
+            {
+               p->state = LINEEND;
+               t->type = ENDLINE;
+            }
+            if (p->state != LINEEND)
+            {
+               finished = 1;
+            }
+            break;
+
+         default:
+            if (isctrl(c))
+            {
+               if (p->state == STARTED)
+               {
+                  p->state = CTRLCHAR;
+                  t->type = CTRL;
+               }
+               if (p->state != CTRLCHAR)
+               {
+                  finished = 1;
+               }
+            }
+            else if (isalpha(c))
+            {
+               if (p->state == STARTED)
+               {
+                  p->state = NORMAL;
+                  t->type = ALPHA;
+               }
+               if (p->state != CTRLCHAR)
+               {
+                  finished = 1;
+               }
+            }
+            else if (isdigit(c))
+            break;
+      

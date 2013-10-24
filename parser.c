@@ -381,7 +381,6 @@ char * get_filename(parser_t *p, file_type_t *type) {
    {
       while(token_cmp(t, "HTTP") != 0)
       {
-         print_t(t);
          if (token_cmp_c(t, SEPERATOR, '/') == 0)
          {
             add_c(&str, '/');
@@ -398,12 +397,12 @@ char * get_filename(parser_t *p, file_type_t *type) {
 
    // Get file type information
    char *c = &str.str[str.len-1];
+
    // Get the file extention
-   while(*(c-1) != '.' && *(c-1) != '/') c--;
+   if (str.len > 1)
+      while(*(c-1) != '.' && *(c-1) != '/') c--;
 
    // Add appropriate file type
-   // TODO: Make this case insensitive?
-   // TODO: Make this more robust?
    if (strcmp(c, "/") == 0) {
       // Doesn't specify file, assume index.html
       add_str(&str, "index.html");
@@ -481,7 +480,7 @@ void get_sub_headers(parser_t *p, http_header_t *h) {
             token_cmp(t, "Accept-Encoding") == 0 ||
             token_cmp(t, "Accept") == 0) {
          // Can skip these ones -- maybe implement them later
-         printf("Skipping...\n");
+         // printf("Skipping...\n");
       } else if (token_cmp(t, "Connection") == 0) {
          TOKEN_ASSERTION(t, p, (token_cmp_c(t, SEPERATOR, ':') == 0));
          t = get_token(p);
@@ -493,8 +492,8 @@ void get_sub_headers(parser_t *p, http_header_t *h) {
             // printf("Did not keep connection\n");
          }
       } else {
-         printf("printing token %s\n", t->string.str ? t->string.str : "something");
-         parser_error("Unknown sub-header type");
+         // We also just skip this for now
+         // parser_error("Unknown sub-header type");
       }
       while (t->type != LINEEND) {
          delete_token(t);
@@ -545,7 +544,7 @@ void parse_header(const char *header)
 }
 
 char header[] = 
-   "GET /sample.html HTTP/1.1\r\n"
+   "GET / HTTP/1.1\r\n"
    "Host: 127.0.0.1:9999\r\n"
    "User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:24.0) Gecko/20100101 Firefox/24.0\r\n"
    "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n"
