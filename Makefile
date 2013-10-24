@@ -1,2 +1,2 @@
 webserver: webserver.c
-	gcc -o webserver -g webserver.c
+	gcc -o webserver webserver.c
