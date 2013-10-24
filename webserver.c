@@ -695,8 +695,8 @@ static void inline writeResponse(char *response, const char *filename, file_type
       strcat(response, "HTTP/1.1 404 Content Not Found");
    }
 
-   // free(sizeBuffer);
-   // free(stringStack);
+   free(sizeBuffer);
+   free(stringStack);
 }
 
 int main(int argc, char *argv[])
@@ -808,12 +808,13 @@ int main(int argc, char *argv[])
                   if(writeBytes < 0)
                      error("Error writing to socket");
 
-                  close(i); // When we write more complicated things, we will have to figure this out better
+                  free(fileBuf);
+
+                  close(i);
                   FD_CLR(i, &active_fd_set);
                }
             }
          }
-      
       }
    }
 
