@@ -573,18 +573,39 @@ void error(char *msg)
    perror(msg);
    exit(1);
 }
-
+static int inline min(int a, int b)
+{
+   if(a < b)
+      return a;
+   else
+      return b;
+}
 /* this file reads the filecontents and stores it in fileBuf*/
-static int inline getContents(char* filename, int* fSize, char* fileBuf)
+static int inline getContents(char* filename, int* fSize, int socket)
 {
    
    FILE *f = fopen(filename, "rb");
+   int tempSize = *fSize;
+   int readSize;
+   int bytesRead;
+   int interval;
+   int writeBytes;
+   char fBuf[1024];
    if(f)
    {
-      if(fileBuf)
+      while(tempSize > 0)
+      {
+         interval   = min(tempSize, 1024);
+         bytesRead  = fread(fBuf, 1, interval,f);
+         writeBytes = send(socket, fBuf, interval, 0);
+         if(writeBytes < 0)
+            error("Writing to socket");
+         tempSize  -= interval;
+      }
+      /*if(fileBuf)
       {
         *fSize = fread(fileBuf, 1, *fSize, f);
-      }
+      }*/
       fclose(f);
       return 1;
    }
@@ -702,7 +723,7 @@ static void inline writeResponse(char *response, const char *filename, file_type
       free(sizeBuffer);
       free(stringStack);
    }
-   free(timeOfResponse);
+   //free(timeOfResponse);
 }
 
 int main(int argc, char *argv[])
@@ -777,7 +798,6 @@ int main(int argc, char *argv[])
                int readBytes, writeBytes;
                char buffer[BUFF_SIZE];
                char httpResponse[1000000];     
-               char* fileBuf;
                int fSize;
  
                memset(buffer, 0, BUFF_SIZE*sizeof(char));
@@ -803,18 +823,13 @@ int main(int argc, char *argv[])
                   header = parse_header(buffer);
                   writeResponse(httpResponse, header->file_name, header->file_type,
                                 &fSize);
-                  fileBuf = (char *)malloc(fSize*sizeof(char));
+                 // fileBuf = (char *)malloc(fSize*sizeof(char));
                   writeBytes = send(i, httpResponse, strlen(httpResponse),0);
                   if(writeBytes < 0)
                      error("Error writing to socket");
 
-                  if( getContents(header->file_name, &fSize, fileBuf) == 1)
-                     writeBytes = send(i, fileBuf, fSize, 0);
-                 
-                  if(writeBytes < 0)
-                     error("Error writing to socket");
-
-                  free(fileBuf);
+                  getContents(header->file_name, &fSize,i);
+                  //free(fileBuf);
                   free(header->file_name);
                   free(header);
 
