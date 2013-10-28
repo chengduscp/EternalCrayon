@@ -13,7 +13,7 @@
 #include <time.h>
 #include <unistd.h>
 #define BUFF_SIZE 1024
-
+#define FILE_INTERVAL 1024
 #include <sys/types.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -590,12 +590,12 @@ static int inline getContents(char* filename, int* fSize, int socket)
    int bytesRead;
    int interval;
    int writeBytes;
-   char fBuf[1024];
+   char fBuf[FILE_INTERVAL];
    if(f)
    {
       while(tempSize > 0)
       {
-         interval   = min(tempSize, 1024);
+         interval   = min(tempSize, FILE_INTERVAL);
          bytesRead  = fread(fBuf, 1, interval,f);
          writeBytes = send(socket, fBuf, interval, 0);
          if(writeBytes < 0)
