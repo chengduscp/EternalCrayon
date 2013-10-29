@@ -834,10 +834,9 @@ int main(int argc, char *argv[])
                }
                else
                {
-                  printf("Here is the message:\n%s\n**************************************************\n", buffer);
-                  /*writeBytes = write(i, "I got your message!\n", 20);
-                  if(writeBytes < 0)
-                     error("Error writing to socket");*/
+                  printf("Here is the message:\n"
+                         "%s\n"
+                         "**************************************************\n", buffer);
 
                   // Clean up TCP connection
                   // Parse header
