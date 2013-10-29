@@ -652,14 +652,9 @@ static void inline writeResponse(char *response, const char *filename, file_type
 
    if(f)
    {
-      /* get last modified time and file size*/
+
       stat(filename, &st);
       size = (long) st.st_size; 
-      lastModTime = st.st_mtime;
-
-      /* convert last modified time string */
-      lastModTimeStr = asctime(localtime(&lastModTime));
-
       /*determine how many digits are in file size*/
       val = 10;
       sizeOfSizeBuffer = 1;
@@ -717,6 +712,13 @@ static void inline writeResponse(char *response, const char *filename, file_type
 
    if(f)
    {
+
+      /* get last modified time and file size*/
+      lastModTime = st.st_mtime;
+
+      /* convert last modified time string */
+      lastModTimeStr = ctime(&lastModTime);
+
       strcat(response, "Last-Modified: ");
       strcat(response, lastModTimeStr);
       strcat(response, "Content-Length: ");
@@ -820,7 +822,10 @@ int main(int argc, char *argv[])
                char buffer[BUFF_SIZE];
                char httpResponse[1000000];     
                int fSize;
- 
+               char div[3];
+               div[0] = '\r';
+               div[1] = '\n';
+               div[2] = '\0';
                memset(buffer, 0, BUFF_SIZE*sizeof(char));
                readBytes = read(i, buffer, BUFF_SIZE-1);
                if(readBytes < 0)
@@ -834,9 +839,9 @@ int main(int argc, char *argv[])
                }
                else
                {
-                  printf("Here is the message:\n"
+                  printf("\n"
                          "%s\n"
-                         "**************************************************\n", buffer);
+                         , buffer);
 
                   // Clean up TCP connection
                   // Parse header
@@ -857,7 +862,6 @@ int main(int argc, char *argv[])
                   //free(fileBuf);
                   free(header->file_name);
                   free(header);
-
                   close(i);
                   FD_CLR(i, &active_fd_set);
                }
