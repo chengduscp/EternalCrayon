@@ -754,7 +754,7 @@ int main(int argc, char *argv[])
    if (bind(sockfd, (struct sockaddr *)&server, sizeof(server)) < 0)
       error("BIND ERROR");
 
-   rc = listen(sockfd,2);
+   rc = listen(sockfd,10);
 
    if(rc < 0)
    {
