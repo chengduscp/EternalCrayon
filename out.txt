@@ -96,3 +96,23 @@ Content-Length: 189600
 Content-Type: image/gif
 
 
+GET /sample.html HTTP/1.1
+Host: 127.0.0.1:9999
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:7.0.1) Gecko/20100101 Firefox/7.0.1
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip, deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Connection: keep-alive
+If-Modified-Since: Tue Oct 29 01:30:48 2013
+
+
+HTTP/1.1 200 OK
+Connection: close
+Date: Tue Oct 29 01:47:35 2013
+Server: Apache/2.2.3 (CentOS)
+Last-Modified: Tue Oct 29 01:47:35 2013
+Content-Length: 166
+Content-Type: text/html
+
+
