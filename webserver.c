@@ -28,7 +28,7 @@ const char END = -1;
 
 void parser_error(const char *err) {
    fprintf(stderr, "PARSER ERROR: %s\n", err);
-   exit(1);
+   // exit(1);
 }
 
 // Types
@@ -114,7 +114,10 @@ inline void add_c(dy_str_t *s, char c)
    {
       s->cap *= 2;
       s->str = realloc(s->str, s->cap);
-      if(!s->str) parser_error("Couldn't create memory for token");
+      if(!s->str) {
+         parser_error("Couldn't create memory for token");
+         exit(1); // Memory error, don't know what to do
+      };
    }
    s->str[s->len] = c;
    s->str[s->len + 1] = '\0';
@@ -296,12 +299,16 @@ token_t* get_token(parser_t *p)
          }
          else
          {
-            if (p->last != '\r' || next != '\n')
+            if (p->last != '\r' || next != '\n') {
                parser_error("Line Ending Does not conform to standard");
-            next = p->get(p->args); // Don't care about the newline anymore
-            delete_string(t);
-            t->c = '\n';
-            t->type = LINEEND;
+               delete_token(t);
+               return 0;
+            } else {
+               next = p->get(p->args); // Don't care about the newline anymore
+               delete_string(t);
+               t->c = '\n';
+               t->type = LINEEND;
+            }
          }
       }
       else if (next < 0) // End of File
@@ -318,8 +325,11 @@ token_t* get_token(parser_t *p)
          next = p->get(p->args); // Need to advance
          t->type = SEPERATOR;
       }
-      else // Don't know what happened
+      else { // Don't know what happened
          parser_error("Unknown Token");
+         delete_token(t);
+         return 0;
+      }
    }
    p->last = next;
    return t;
@@ -383,8 +393,20 @@ void printParse(const char *c_str)
 
 #define TOKEN_ASSERTION(t, p, assertion) \
    t = get_token(p); \
-   if(!assertion) \
+   if(!assertion) { \
+      delete_token(t); \
       parser_error("Unknown entity in header"); \
+      return 0; \
+   } \
+   delete_token(t); \
+
+#define TOKEN_CHECK(t, p, assertion) \
+   t = get_token(p); \
+   if(!assertion) { \
+      delete_token(t); \
+      parser_error("Unknown entity in header"); \
+      return; \
+   } \
    delete_token(t); \
 
 // Assumes we've just started parsing the header file and just gotten the 'GET'
@@ -394,13 +416,13 @@ char * get_filename(parser_t *p, file_type_t *type) {
    int first = 1;
    t = get_token(p);
    create_dy_str(&str);
-   // Check for absolute path, store path, etc.
+     // Check for absolute path, store path, etc.
    // Have absolute path
    if (token_cmp_c(t, SEPERATOR, '/') == 0)
    {
-      while(token_cmp(t, "HTTP") != 0)
+      while(token_cmp(t, "HTTP") != 0 && t->type != LINEEND)
       {
-         // print_t(t);
+           // print_t(t);
          if (!first && token_cmp_c(t, SEPERATOR, '/') == 0)
          {
             add_c(&str, '/');
@@ -436,7 +458,6 @@ char * get_filename(parser_t *p, file_type_t *type) {
    } else if (strcmp(c, "txt") == 0) {
       *type = PLAIN_TEXT;
    } else {
-      // For now, we just use plain text if we don't know the format type
       *type = UNKNOWN_FILE_TYPE;
    }
 
@@ -455,8 +476,8 @@ void get_port(parser_t *p, http_header_t *h) {
 
    // Get the header stuff out of the way
    token_t *t = 0;
-   TOKEN_ASSERTION(t, p, (token_cmp(t, "Host") == 0));
-   TOKEN_ASSERTION(t, p, (token_cmp_c(t, SEPERATOR, ':') == 0));
+   TOKEN_CHECK(t, p, (token_cmp(t, "Host") == 0));
+   TOKEN_CHECK(t, p, (token_cmp_c(t, SEPERATOR, ':') == 0));
 
    // Get IP Address
    t = get_token(p);
@@ -474,7 +495,7 @@ void get_port(parser_t *p, http_header_t *h) {
 
    // Get port
    delete_token(t);
-   TOKEN_ASSERTION(t, p, (token_cmp_c(t, SEPERATOR, ':') == 0));
+   TOKEN_CHECK(t, p, (token_cmp_c(t, SEPERATOR, ':') == 0));
    t = get_token(p);
    if (t->type != TOKEN) {
       fprintf(stderr, "Unable to get port number\n");
@@ -489,7 +510,7 @@ void get_port(parser_t *p, http_header_t *h) {
    }
    delete_token(t);
    h->port = port;
-   TOKEN_ASSERTION(t, p, (t->type == LINEEND));
+   TOKEN_CHECK(t, p, (t->type == LINEEND));
 }
 
 void get_sub_headers(parser_t *p, http_header_t *h) {
@@ -504,7 +525,7 @@ void get_sub_headers(parser_t *p, http_header_t *h) {
          // printf("Skipping...\n");
       } else if (token_cmp(t, "Connection") == 0) {
          delete_token(t);
-         TOKEN_ASSERTION(t, p, (token_cmp_c(t, SEPERATOR, ':') == 0));
+         TOKEN_CHECK(t, p, (token_cmp_c(t, SEPERATOR, ':') == 0));
          t = get_token(p);
          if (token_cmp(t, "keep-alive") == 0) {
             h->keep_connection = 1;
@@ -529,8 +550,9 @@ void get_sub_headers(parser_t *p, http_header_t *h) {
 
 http_header_t *get_header(parser_t *p) {
    http_header_t *h = (http_header_t *)malloc(sizeof(http_header_t));
-
    h->file_name = get_filename(p, &h->file_type);
+   if (h->file_name == 0)
+      return h;
    get_port(p, h);
    get_sub_headers(p, h);
 
@@ -556,7 +578,6 @@ http_header_t *parse_header(const char *header_string)
    }
    else if (error_token(t))
    {
-      printf("Awww :(\n");
       printf("Error parsing header\n");
       print_t(t);
    }
@@ -821,8 +842,13 @@ int main(int argc, char *argv[])
                   // Clean up TCP connection
                   // Parse header
                   header = parse_header(buffer);
-                  writeResponse(httpResponse, header->file_name, header->file_type,
-                                &fSize);
+                  if (header && header->file_name) {
+                     writeResponse(httpResponse, header->file_name, header->file_type,
+                                   &fSize);
+                  } else {
+                     writeResponse(httpResponse, 0, UNKNOWN_FILE_TYPE,
+                                   &fSize);
+                  }
                  // fileBuf = (char *)malloc(fSize*sizeof(char));
                   writeBytes = send(i, httpResponse, strlen(httpResponse),0);
                   if(writeBytes < 0)
